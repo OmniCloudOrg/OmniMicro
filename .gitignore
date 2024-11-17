@@ -1,3 +1,5 @@
 
 /omni-source/agent-db
 /omni-source/director-db
+/omni-prod/agent-db
+/omni-prod/director-db

@@ -1,0 +1,26 @@
+listen_addr: "0.0.0.0:8080"
+global_timeout_ms: 5000
+max_connections: 10000
+
+routes:
+  "/":
+    upstream: "http://cosmos:4173"
+    timeout_ms: 1000
+    retry_count: 1
+    preserve_host_header: true  # For SvelteKit routing
+    priority: 0
+
+  "/agent":
+    upstream: "http://agent:8080"
+    timeout_ms: 1000
+    retry_count: 1
+    preserve_host_header: true  # For SvelteKit routing
+    priority: 0
+    
+  "/director":
+    upstream: "http://director:8080"
+    health_check_path: "/health"
+    timeout_ms: 3000
+    retry_count: 2
+    preserve_host_header: true  # For SvelteKit routing
+    priority: 50
