@@ -52,6 +52,19 @@ services:
     networks:
       - omni-micro
 
+  cosmos-api:
+    build:
+      context: ../../Omni-Cosmos-API/
+      dockerfile: ../Omni-Cosmos-API/Dockerfile
+    environment:
+      - DATABASE_URL=./harbr.db
+      - HOST=0.0.0.0
+    expose:
+      - "8080"
+      - "2375"  # Expose the Docker proxy port
+    networks:
+      - omni-micro
+
   router:
     image: ghcr.io/harbr-foundation/harbr-router:main
     ports:
