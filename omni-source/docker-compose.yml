@@ -3,24 +3,47 @@ networks:
     driver: bridge
 
 services:
-  #director:
-  #  build:
-  #    context: ../../OmniDirector/
-  #    dockerfile: ../OmniDirector/Dockerfile
-  #    args:
-  #      JWT_SECRET: ${JWT_SECRET:-default_secret_for_development}
-  #  environment:
-  #    - NODE_ENV=production
-  #    - VITE_API_URL=http://api:3030
-  #    - DATABASE_URL=./harbr.db
-  #    - JWT_SECRET=${JWT_SECRET:-default_secret_for_development}
-  #    - HOST=0.0.0.0
-  #  expose:
-  #    - "3001"
-  #  depends_on:
-  #    - api
-  #  networks:
-  #    - omni-micro
+  omni-forge:
+    build:
+      context: ../../OmniForge/
+      dockerfile: ../OmniForge/Dockerfile
+      args:
+        JWT_SECRET: ${JWT_SECRET:-default_secret_for_development}
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=./harbr.db
+      - JWT_SECRET=${JWT_SECRET:-default_secret_for_development}
+      - HOST=0.0.0.0
+    expose:
+      - "3000"
+    volumes:
+      - ./omniforge_state.db:/bin/omniforge_state.db
+    depends_on:
+      - director
+      - agent
+      - cosmos
+      - router
+    networks:
+      - omni-micro
+
+  director:
+    build:
+      context: ../../OmniDirector/
+      dockerfile: ../OmniDirector/Dockerfile
+      args:
+        JWT_SECRET: ${JWT_SECRET:-default_secret_for_development}
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=./harbr.db
+      - JWT_SECRET=${JWT_SECRET:-default_secret_for_development}
+      - HOST=0.0.0.0
+    expose:
+      - "3000"
+    depends_on:
+      - director-db
+      - agent
+    networks:
+      - omni-micro
 
   agent:
       build:
@@ -34,6 +57,8 @@ services:
         - "2375"  # Expose the Docker proxy port
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket
+      depends_on:
+        - agent-db
       networks:
         - omni-micro
       privileged: true
@@ -48,7 +73,7 @@ services:
     expose:
       - "4173"
     depends_on:
-      - agent
+      - cosmos-api
     networks:
       - omni-micro
 
@@ -62,6 +87,8 @@ services:
     expose:
       - "8080"
       - "2375"  # Expose the Docker proxy port
+    depends_on:
+      - director
     networks:
       - omni-micro
 
