@@ -1,0 +1,93 @@
+networks:
+  omni-micro:
+    driver: bridge
+
+services:
+  #director:
+  #  build:
+  #    context: ../../OmniDirector/
+  #    dockerfile: ../OmniDirector/Dockerfile
+  #    args:
+  #      JWT_SECRET: ${JWT_SECRET:-default_secret_for_development}
+  #  environment:
+  #    - NODE_ENV=production
+  #    - VITE_API_URL=http://api:3030
+  #    - DATABASE_URL=./harbr.db
+  #    - JWT_SECRET=${JWT_SECRET:-default_secret_for_development}
+  #    - HOST=0.0.0.0
+  #  expose:
+  #    - "3001"
+  #  depends_on:
+  #    - api
+  #  networks:
+  #    - omni-micro
+
+  agent:
+      build:
+        context: ../../OmniAgent/
+        dockerfile: ../OmniAgent/Dockerfile
+      environment:
+        - DATABASE_URL=./harbr.db
+        - HOST=0.0.0.0
+      expose:
+        - "8080"
+        - "2375"  # Expose the Docker proxy port
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket
+      networks:
+        - omni-micro
+      privileged: true
+
+  cosmos:
+    build:
+      context: ../../Omni-Cosmos/
+      dockerfile: ../Omni-Cosmos/Dockerfile
+    environment:
+      - DATABASE_URL=./harbr.db
+      - HOST=0.0.0.0
+    expose:
+      - "4173"
+    depends_on:
+      - agent
+    networks:
+      - omni-micro
+
+  router:
+    image: ghcr.io/harbr-foundation/harbr-router:main
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./proxy-config.yml:/etc/harbr-router/config.yml
+    restart: unless-stopped
+    depends_on:
+      - cosmos
+    networks:
+      - omni-micro
+
+  director-db:
+      image: mysql:8.0
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: example
+      expose:
+        - "3306"
+      volumes:
+        - ./director-db:/var/lib/mysql
+      networks:
+        - omni-micro
+
+  agent-db:
+      image: mysql:8.0
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: example
+      expose:
+        - "3306"
+      volumes:
+        - ./agent-db:/var/lib/mysql
+      networks:
+        - omni-micro
+
+secrets:
+  db-password:
+    file: db/password.txt
