@@ -3,24 +3,46 @@ networks:
     driver: bridge
 
 services:
-  #director:
-  #  build:
-  #    context: ../../OmniDirector/
-  #    dockerfile: ../OmniDirector/Dockerfile
-  #    args:
-  #      JWT_SECRET: ${JWT_SECRET:-default_secret_for_development}
-  #  environment:
-  #    - NODE_ENV=production
-  #    - VITE_API_URL=http://api:3030
-  #    - DATABASE_URL=./harbr.db
-  #    - JWT_SECRET=${JWT_SECRET:-default_secret_for_development}
-  #    - HOST=0.0.0.0
-  #  expose:
-  #    - "3001"
-  #  depends_on:
-  #    - api
-  #  networks:
-  #    - omni-micro
+  forge:
+    image: ghcr.io/omni-forge/omniforge:main
+    environment:
+      - MODE=production
+    expose:
+      - "3000"
+    depends_on:
+      - director
+      - agent
+      - router
+      - forge-db
+    networks:
+      - omni-micro
+
+  forge-db:
+      image: mysql:8.0
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: example
+      expose:
+        - "3306"
+      volumes:
+        - ./forge-db:/var/lib/mysql
+      networks:
+        - omni-micro
+
+  director:
+    image: ghcr.io/omni-forge/omnidirector:main
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://api:3030
+      - DATABASE_URL=./harbr.db
+      - JWT_SECRET=${JWT_SECRET:-default_secret_for_development}
+      - HOST=0.0.0.0
+    expose:
+      - "3000"
+    depends_on:
+      - router
+    networks:
+      - omni-micro
 
   agent:
       image: ghcr.io/omni-forge/omniagent:main
@@ -34,6 +56,7 @@ services:
         - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket
       networks:
         - omni-micro
+   #    - router
       privileged: true
 
   cosmos:
@@ -45,6 +68,8 @@ services:
       - "4173"
     depends_on:
       - agent
+  #   - director
+  #   - forge
     networks:
       - omni-micro
 
@@ -55,8 +80,6 @@ services:
     volumes:
       - ./proxy-config.yml:/etc/harbr-router/config.yml
     restart: unless-stopped
-    depends_on:
-      - cosmos
     networks:
       - omni-micro
 
